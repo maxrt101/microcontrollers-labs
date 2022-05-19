@@ -27,7 +27,7 @@ void loop() {
         delay(kDelay);
       }
       PORTA = 0;
-      inByte=0;
+      inByte = 0;
     } else if (inByte == kAlgo2Code) {
       int i = 7;
       PORTA = 1;
@@ -39,17 +39,17 @@ void loop() {
         delay(kDelay);
       }
       PORTA = 0;
-      inByte=0;
+      inByte = 0;
     }
     Serial.print(inByte);
   }
 
-  if(digitalRead(kAlgo1Button) == LOW) {
+  if (digitalRead(kAlgo1Button) == LOW) {
     Serial.write(kAlgo1Code);
     delay(650);
   }
 
-  if(digitalRead(kAlgo2Button) == LOW) {
+  if (digitalRead(kAlgo2Button) == LOW) {
     Serial.write(kAlgo2Code);
     delay(650);
   }
