@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Data;
-using System.Windows.Forms;
-using System.IO.Ports;
-using System.Text.RegularExpressions;
-using System.Collections.Generic;
 using System.Text;
+using System.Drawing;
+using System.IO.Ports;
+using System.Windows.Forms;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace WindowsFormsApplication1
 {
@@ -16,9 +17,6 @@ namespace WindowsFormsApplication1
         const byte SLAVE2_ADDRESS = 0xA7;
 
         const byte COMMAND_BYTE = 0xB1;
-
-        const int DATA1_SIZE = 5;
-        const int DATA2_SIZE = 10;
 
         const int CRC_INIT = 0xffff;
 
@@ -61,7 +59,7 @@ namespace WindowsFormsApplication1
             InitializeComponent();
             serialPort1.BaudRate = SERIAL_SPEED;
         }
-        
+
         private void comboBox1_Click(object sender, EventArgs e) {
             int num;
             string[] ports = SerialPort.GetPortNames().OrderBy(
@@ -95,56 +93,50 @@ namespace WindowsFormsApplication1
         private void buttonFromSlave1_Click(object sender, EventArgs e) {
             byte[] payload = new byte[] { SLAVE1_ADDRESS, COMMAND_BYTE };
             serialPort1.Write(payload, 0, 2);
-            
-            TextBox[] textBoxes = { textBox1, textBox2, textBox3, textBox4, textBox5 };
 
-            for (int k = 0; k < 5; k++) {
-                List<byte> inputBytes = new List<byte>();
 
-                for (int i = 0; i < DATA1_SIZE; i++) {
-                    inputBytes.Add((byte) serialPort1.ReadByte());
-                }
+            List<byte> inputBytes = new List<byte>();
+            int expectedSize = serialPort1.ReadByte();
 
-                String input = System.Text.Encoding.ASCII.GetString(inputBytes.ToArray());
+            for (int i = 0; i < expectedSize; i++) {
+                inputBytes.Add((byte) serialPort1.ReadByte());
+            }
 
-                ushort transferredChecksum = CombineBytes((byte) serialPort1.ReadByte(), (byte) serialPort1.ReadByte());
-                ushort calculatedChecksum  = CalculateCRC(inputBytes, DATA1_SIZE);
+            String input = System.Text.Encoding.ASCII.GetString(inputBytes.ToArray());
 
-                if (transferredChecksum == calculatedChecksum) {
-                    textBoxes[k].Text = input;
-                } else {
-                    textBoxes[k].Text = "Bad data! recv:" + transferredChecksum.ToString() + " calc:" + calculatedChecksum.ToString();
-                }
+            ushort transferredChecksum = CombineBytes((byte) serialPort1.ReadByte(), (byte) serialPort1.ReadByte());
+            ushort calculatedChecksum  = CalculateCRC(inputBytes, DATA1_SIZE);
 
+            if (transferredChecksum == calculatedChecksum) {
+                textBox1.Text = input;
+            } else {
+                textBox1.Text = "Bad data! recv:" + transferredChecksum.ToString() + " calc:" + calculatedChecksum.ToString();
             }
         }
 
         private void buttonFromSlave2_Click(object sender, EventArgs e) {
-            byte[] payload = new byte[] { SLAVE2_ADDRESS, COMMAND_BYTE };
-            serialPort1.Write(payload, 0, 2);
+          byte[] payload = new byte[] { SLAVE2_ADDRESS, COMMAND_BYTE };
+          serialPort1.Write(payload, 0, 2);
 
-            TextBox[] textBoxes = { textBox1, textBox2, textBox3, textBox4, textBox5 };
+          TextBox[] textBoxes = { textBox1, textBox2, textBox3, textBox4, textBox5 };
 
-            for (int k = 0; k < 5; k++) {
-                List<byte> inputBytes = new List<byte>();
+          List<byte> inputBytes = new List<byte>();
+          int expectedSize = serialPort1.ReadByte();
 
-                for (int i = 0; i < DATA2_SIZE; i++) {
-                    inputBytes.Add((byte) serialPort1.ReadByte());
-                }
+          for (int i = 0; i < expectedSize; i++) {
+              inputBytes.Add((byte) serialPort1.ReadByte());
+          }
 
-                String input = System.Text.Encoding.ASCII.GetString(inputBytes.ToArray());
+          String input = System.Text.Encoding.ASCII.GetString(inputBytes.ToArray());
 
-                ushort transferredChecksum = CombineBytes((byte) serialPort1.ReadByte(), (byte) serialPort1.ReadByte());
-                ushort calculatedChecksum  = CalculateCRC(inputBytes, DATA2_SIZE);
+          ushort transferredChecksum = CombineBytes((byte) serialPort1.ReadByte(), (byte) serialPort1.ReadByte());
+          ushort calculatedChecksum  = CalculateCRC(inputBytes, DATA1_SIZE);
 
-                if (transferredChecksum == calculatedChecksum) {
-                    textBoxes[k].Text = input;
-                } else {
-                    textBoxes[k].Text = "Bad data! recv:" + transferredChecksum.ToString() + " calc:" + calculatedChecksum.ToString();
-                }
-
-            }
-
+          if (transferredChecksum == calculatedChecksum) {
+              textBox1.Text = input;
+          } else {
+              textBox1.Text = "Bad data! recv:" + transferredChecksum.ToString() + " calc:" + calculatedChecksum.ToString();
+          }
         }
 
         public static ushort CalculateCRC(List<byte> buffer, int length) {
@@ -167,5 +159,6 @@ namespace WindowsFormsApplication1
 
         private void Form1_Load(object sender, EventArgs e) {}
 
+        private void textBox1_TextChanged(object sender, EventArgs e) {}
     }
 }

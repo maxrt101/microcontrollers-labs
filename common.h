@@ -15,6 +15,8 @@
 
 #define COMMAND_BYTE 0xB1
 
+#define PCF8563_ADDRESS 0x51
+
 #define CRC_INIT 0xffff
 
 typedef unsigned short ushort;
@@ -54,6 +56,29 @@ const ushort CRC_CCITT_TABLE[256] = {
   0x6E17, 0x7E36, 0x4E55, 0x5E74, 0x2E93, 0x3EB2, 0x0ED1, 0x1EF0
 };
 
+enum DataType {
+  DT_SECONDS,
+  DT_MINUTES,
+  DT_HOUR,
+  DT_WEEK_DAY,
+  DT_MONTH_DAY,
+  DT_MONTH,
+  DT_YEAR,
+  _DT_MAX,
+};
+
+const byte DATA_MASKS[_DT_MAX] = {
+  0b01111111,
+  0x01111111,
+  0x00111111,
+  0x00111111,
+  0x00000111,
+  0x00011111,
+  0x11111111,
+};
+
+const String DAYS_OF_WEEK[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
 struct MasterState {
   bool isAddress = true;
   bool isCommand = false;
@@ -65,6 +90,67 @@ struct SlaveState {
   bool isCommand = false;
   byte command = 0;
   byte address = 0;
+  byte data[_DT_MAX] = {0};
+
+  inline void writeData() {
+    Wire.beginTransmission(PCF8563_ADDRESS);
+    Wire.write(0x02);
+    for (int i = 0; i < _DT_MAX; i++) {
+      Wire.write(decToBcd(data[i]));
+    }
+    Wire.endTransmission();
+  }
+
+  inline void readData() {
+    Wire.beginTransmission(PCF8563_ADDRESS);
+    Wire.write(0x02);
+    Wire.endTransmission();
+    Wire.requestFrom(PCF8563_ADDRESS, 7);
+
+    for (int i = 0; i < _DT_MAX; i++) {
+      data[i] = bcdToDec(Wire.read() & DATA_MASKS[i]);
+    }
+  }
+
+  inline void writeDataToUART() {
+    int loopCount = 0;
+
+    while (true) {
+        if (loopCount == 2) {
+          readData();
+          String result = DAYS_OF_WEEK[data[DT_WEEK_DAY]] + " "
+                        + String(data[DT_MONTH_DAY]) + " "
+                        + String(data[DT_MONTH]) + "/"
+                        + String(data[DT_WEEK_DAY]) + "/20"
+                        + String(data[DT_YEAR]) + "-"
+                        + String(data[DT_HOUR]) + ":"
+                        + (data[DT_MINUTES] < 10 ? "0" : "")
+                        + String(data[DT_MINUTES]) + ":"
+                        + (data[DT_SECONDS] < 10 ? "0" : "")
+                        + String(data[DT_SECONDS]);
+
+          char* buffer = malloc(result.length());
+          result.getBytes(buffer, result.length());
+
+          ushort checkSum = computeCRC(buffer, result.length());
+
+          Serial.write(result.length());
+
+          for (int i = 0; i < result.length(); i++) {
+                Serial.write(buffer[i]);
+          }
+
+          Serial.write((checkSum >> 8) & 0xFF);
+          Serial.write(checkSum & 0xFF);
+
+          free(buffer);
+          break;
+        }
+
+        loopCount++;
+      }
+  }
+
 };
 
 inline byte toggleBit(byte input, int bit) {
@@ -82,5 +168,14 @@ inline ushort computeCRC(byte* buffer. int size) {
 
   return crc;
 }
+
+inline byte bcdToDec(byte value) {
+  return ((value / 16) * 10 + value % 16);
+}
+
+inline byte decToBcd(byte value) {
+  return (value / 10 * 16 + value % 10);
+}
+
 
 #endif /* _COMMON_H_ */
